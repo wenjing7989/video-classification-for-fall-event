@@ -9,6 +9,8 @@ from keras import optimizers
 from keras.layers.convolutional import (Conv2D, MaxPooling3D, Conv3D,
     MaxPooling2D, MaxPooling1D, AveragePooling1D)
 from keras.applications.vgg16 import VGG16
+from keras.regularizers import l2 # L2-regularisation
+l2_lambda = 0.01
 
 class mymodels():
     def __init__(self, nb_classes, modelname, num_cuts, img_size=[240,320,3], saved_model=None):
@@ -68,23 +70,24 @@ class mymodels():
 
     def crnn(self):
         model = Sequential()
-        model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu'),
+        model.add(TimeDistributed(Conv2D(16,(3,3), kernel_regularizer=l2(l2_lambda), padding='same', activation='relu'),
             input_shape=self.input_shape))
         model.add(TimeDistributed(MaxPooling2D()))
-        model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu')))
+        model.add(TimeDistributed(Conv2D(16,(3,3), kernel_regularizer=l2(l2_lambda), padding='same', activation='relu')))
         model.add(TimeDistributed(MaxPooling2D()))
-        model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu')))
+        model.add(TimeDistributed(Conv2D(16,(3,3), kernel_regularizer=l2(l2_lambda), padding='same', activation='relu')))
         model.add(TimeDistributed(MaxPooling2D()))
-        model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu')))
+        model.add(TimeDistributed(Conv2D(16,(3,3), kernel_regularizer=l2(l2_lambda), padding='same', activation='relu')))
         #model.add(TimeDistributed(MaxPooling2D()))
         #model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu')))
+        model.add(Dropout(0.5))
         model.add(TimeDistributed(MaxPooling2D()))
         model.add(TimeDistributed(Flatten()))
         model.add(LSTM(256))
         # model.add(LSTM(32, return_sequences=True))
         # model.add(LSTM(32, return_sequences=True))
         model.add(Dropout(0.5))
-        model.add(Dense(self.nb_classes, activation='softmax'))
+        model.add(Dense(self.nb_classes, kernel_regularizer=l2(l2_lambda), activation='softmax'))
         print(model.summary())
 
         return model

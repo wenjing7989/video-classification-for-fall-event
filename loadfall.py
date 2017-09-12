@@ -35,7 +35,7 @@ class falldata:
                 lie[self.tvt]+walk[self.tvt]
         self.num = len(self.image)
 
-    def generate(self, batch_size, shuffle=True, d2=False, multiL=True):
+    def generate(self, batch_size, shuffle=True, d2=False, multiL=False):
         #d2 means only one frame is fed
         path = './falldata/'
 
