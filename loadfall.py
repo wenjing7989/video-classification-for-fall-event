@@ -19,6 +19,11 @@ def preprocess_input(x):
         x[:, :, 2] -= 103.939
     return x/128
 
+def transform(img, r1):
+    if r1:
+        img = img[:,::-1,:]
+    return img
+
 fall = {'train':range(0,96), 'val':range(96,128), 'test':range(128,184)}
 #184: 96, 32, 56; 0, [1,0]
 squat = {'train':range(184,208), 'val':range(208,216), 'test':range(216,224)}
@@ -35,7 +40,7 @@ class falldata:
                 lie[self.tvt]+walk[self.tvt]
         self.num = len(self.image)
 
-    def generate(self, batch_size, shuffle=True, d2=False, multiL=True):
+    def generate(self, batch_size, shuffle=True, d2=False, multiL=False):
         #d2 means only one frame is fed
         path = './falldata/'
 
@@ -65,8 +70,11 @@ class falldata:
                     img = plt.imread(path+str(self.image[i]+1).zfill(3)+'/'+name)
                     temp=imresize(img, [224,224])
                 else:
+                    r1 = np.random.randint(2)
                     for name in imgs:
                         img = plt.imread(path+str(self.image[i]+1).zfill(3)+'/'+name)
+                        if self.tvt=='train':
+                            img = transform(img, r1)
                         temp.append(imresize(img, [224,224]))
                 # if i%10==0:
                 #     plt.imshow(temp)
@@ -81,10 +89,51 @@ class falldata:
                     X, y = [], []
                     yield tmp_inp, tmp_targets
 
+    def load_all(self, shuffle=True, d2=False, multiL=False):
+        path = './falldata/'
+
+        if multiL:
+            nb_classes = 5
+            label = [0]*len(fall[self.tvt])+[1]*len(squat[self.tvt])+\
+            [2]*len(sit[self.tvt])+[3]*len(lie[self.tvt])+[4]*len(walk[self.tvt])
+        else:
+            nb_classes = 2
+            label = [0]*len(fall[self.tvt])+[1]*(len(self.image)-len(fall[self.tvt]))
+
+        if shuffle:
+            comb = zip(self.image,label)
+            np.random.shuffle(comb)
+            self.image, label = zip(*comb)
+
+        X, y = [], []
+        for i in range(len(label)):
+            assert (self.image[i]<184)!=label[i]
+            temp = []
+            imgs=os.listdir(path+str(self.image[i]+1).zfill(3))
+            imgs=sorted(imgs)
+            if d2:
+                #name = imgs[np.random.choice(5)]
+                name = imgs[4]
+                img = plt.imread(path+str(self.image[i]+1).zfill(3)+'/'+name)
+                temp=imresize(img, [224,224])
+            else:
+                r1 = np.random.randint(2)
+                for name in imgs:
+                    img = plt.imread(path+str(self.image[i]+1).zfill(3)+'/'+name)
+                    if self.tvt=='train':
+                        img = transform(img, r1)
+                    temp.append(imresize(img, [224,224]))
+            temp = np.float32(temp)
+            X.append(preprocess_input(temp))
+            y.append(label[i])
+
+        tmp_inp = np.array(X)
+        tmp_targets = to_categorical(y,nb_classes)
+        return tmp_inp, tmp_targets
+
     def get_steps(self):
         return self.num
 
 if __name__=='__main__':
     data = falldata('val')
-    a=data.generate(25)
-    #next(a)[0].shape
+#    a=data.generate(25)
