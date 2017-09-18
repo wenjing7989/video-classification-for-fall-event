@@ -24,7 +24,7 @@ nb_epoch = 150
 
 saved_model = None #'./result/final.hdf5'
 batch_size = 1
-nb_classes = 5#2
+nb_classes = 2#5
 
 img_size = [224, 224, 3]
 

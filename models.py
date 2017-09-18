@@ -9,6 +9,7 @@ from keras import optimizers
 from keras.layers.convolutional import (Conv2D, MaxPooling3D, Conv3D,
     MaxPooling2D, MaxPooling1D, AveragePooling1D)
 from keras.applications.vgg16 import VGG16
+from keras.layers.normalization import BatchNormalization
 
 class mymodels():
     def __init__(self, nb_classes, modelname, num_cuts, img_size=[240,320,3], saved_model=None):
@@ -70,6 +71,7 @@ class mymodels():
         model = Sequential()
         model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu'),
             input_shape=self.input_shape))
+        #model.add(TimeDistributed((BatchNormalization())))
         model.add(TimeDistributed(MaxPooling2D()))
         model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu')))
         model.add(TimeDistributed(MaxPooling2D()))
@@ -84,6 +86,7 @@ class mymodels():
         # model.add(LSTM(32, return_sequences=True))
         # model.add(LSTM(32, return_sequences=True))
         model.add(Dropout(0.5))
+        #model.add(BatchNormalization())
         model.add(Dense(self.nb_classes, activation='softmax'))
         print(model.summary())
 
