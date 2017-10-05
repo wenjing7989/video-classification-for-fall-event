@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import load_model
+from sklearn.metrics import confusion_matrix
 
 from loadfall import falldata
 
@@ -21,5 +22,5 @@ print(result[1])
 
 result = model.predict_generator(generator, steps)
 prediction = result.argmax(axis=1)
+#matrix = confusion_matrix(true_label, prediction)
 # print model.summary()
-#validate('train', 'v_BoxingSpeedBag_g09_c02', num_cuts=num_cuts)

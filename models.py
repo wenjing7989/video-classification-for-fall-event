@@ -26,7 +26,7 @@ class mymodels():
             print(self.model.summary())
         elif modelname == 'crnn':
             print("Loading RNN model.")
-            self.input_shape = [num_cuts]+img_size
+            self.input_shape = [None]+img_size
             self.model = self.crnn()
         elif modelname == 'conv2':
             print("Loading Conv2D")
@@ -45,7 +45,7 @@ class mymodels():
             sys.exit()
 
         #optimizer = optimizers.Adam(lr=1e-4)
-        optimizer = optimizers.SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True)
+        optimizer = optimizers.SGD(lr=0.00001, decay=1e-6, momentum=0.9, nesterov=True)
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizer,
             metrics=metrics)
 
@@ -67,7 +67,7 @@ class mymodels():
 
         return model
 
-    def crnn(self):
+    def crnn_small(self):
         model = Sequential()
         model.add(TimeDistributed(Conv2D(16,(3,3), padding='same', activation='relu'),
             input_shape=self.input_shape))
@@ -83,7 +83,8 @@ class mymodels():
         model.add(TimeDistributed(MaxPooling2D()))
         model.add(TimeDistributed(Flatten()))
         model.add(LSTM(256))
-        # model.add(LSTM(32, return_sequences=True))
+        #model.add(LSTM(128, return_sequences=True))
+        #model.add(Flatten())
         # model.add(LSTM(32, return_sequences=True))
         model.add(Dropout(0.5))
         #model.add(BatchNormalization())
@@ -130,7 +131,7 @@ class mymodels():
 
         return model
 
-    def crnn_pre(self):
+    def crnn(self):
         base_model = VGG16(weights='imagenet', include_top=False)
         input_layer = Input(shape=self.input_shape)
         x = TimeDistributed(base_model)(input_layer)
@@ -142,7 +143,7 @@ class mymodels():
         x = Dropout(0.5)(x)
         x = Dense(self.nb_classes, activation='softmax')(x)
         model = Model(inputs=input_layer, outputs=x)
-        for layer in base_model.layers:
+        for layer in base_model.layers[-3:]:
             layer.trainable = True
         print(model.summary())
 
@@ -218,5 +219,5 @@ class mymodels():
         return model
 
 
-# if __name__=='__main__':
-#     a=mymodels(5, 'mcnn', 10, [7,10,512])
+if __name__=='__main__':
+    a=mymodels(5, 'crnn', 5)

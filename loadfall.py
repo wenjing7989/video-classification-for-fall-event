@@ -6,8 +6,6 @@ from scipy.misc import imresize
 
 np.random.seed(1234)
 
-# 1-184 falling down, 185-224 squat 225-272 sit 273-320 lie down 321-400 walk
-# every 8 video are from the same angle, e.g. 1,9,17
 def preprocess_input(x):
     if x.ndim==4:
         x[:, :, :, 0] -= 123.68
@@ -24,15 +22,50 @@ def transform(img, r1):
         img = img[:,::-1,:]
     return img
 
-fall = {'train':range(0,96), 'val':range(96,128), 'test':range(128,184)}
-#184: 96, 32, 56; 0, [1,0]
-squat = {'train':range(184,208), 'val':range(208,216), 'test':range(216,224)}
-sit = {'train':range(224,256), 'val':range(256,264), 'test':range(264,272)}
-lie = {'train':range(272,304), 'val':range(304,312), 'test':range(312,320)}
-walk = {'train':range(320,368), 'val':range(368,376), 'test':range(376,400)}
+def get_idx(num):
+    # every 8 video are from the same angle, e.g. 1,9,17
+    if num.size is 1:
+        num = [num]
+    return reduce((lambda x,y: x + range(y*8,y*8+8)), num, [])
 
-#216: 112, 40, 64; 1, [0,1]
-# train208, val72, test120
+downsample = True
+
+# 1-184 falling down; label 0, [1,0];
+idx_fall = np.random.permutation(23)
+fall = {'train':get_idx(idx_fall[:14]), 'val':get_idx(idx_fall[14:18]),
+        'test':get_idx(idx_fall[18:])}#23, 14,4,5
+
+if downsample:
+    # 185-224 squat 225-272 sit 273-320 lie down 321-400 walk 14,5,8
+    path = './multi_small/img/'
+    idx_squat = np.random.permutation(5)+23
+    idx_sit = np.random.permutation(6)+23+5
+    idx_lie = np.random.permutation(6)+23+5+6
+    idx_walk = np.random.permutation(10)+23+5+6+6
+    squat = {'train':get_idx(idx_squat[:3]), 'val':get_idx(idx_squat[3]),
+            'test':get_idx(idx_squat[4])}#5, 3 1 1
+    sit = {'train':get_idx(idx_sit[:3]), 'val':get_idx(idx_sit[3]),
+            'test':get_idx(idx_sit[4:])}#6, 3 1 2
+    lie = {'train':get_idx(idx_lie[:3]), 'val':get_idx(idx_lie[3]),
+            'test':get_idx(idx_lie[4:])}#6, 3 1 2
+    walk = {'train':get_idx(idx_walk[:6]), 'val':get_idx(idx_walk[6:8]),
+            'test':get_idx(idx_walk[8:])}#10, 5 2 3
+else:
+    # sit 185-232 lie 233-264 crouch down 265-320 walk 321-400 14,5,8
+    path = './multi_large/'
+    idx_sit = np.random.permutation(6)+23
+    idx_lie = np.random.permutation(4)+23+6
+    idx_squat = np.random.permutation(7)+23+4+6
+    idx_walk = np.random.permutation(10)+23+4+6+7
+    sit = {'train':get_idx(idx_sit[:3]), 'val':get_idx(idx_sit[3]),
+            'test':get_idx(idx_sit[4:])}#6, 3 1 2
+    lie = {'train':get_idx(idx_lie[:2]), 'val':get_idx(idx_lie[2]),
+            'test':get_idx(idx_lie[3])}#4, 2 1 1
+    squat = {'train':get_idx(idx_squat[:4]), 'val':get_idx(idx_squat[4]),
+            'test':get_idx(idx_squat[5:])}#7, 4 1 2
+    walk = {'train':get_idx(idx_walk[:6]), 'val':get_idx(idx_walk[6:8]),
+            'test':get_idx(idx_walk[8:])}#10, 5 2 3
+#import pdb; pdb.set_trace()
 class falldata:
     def __init__(self, tvt):
         self.tvt = tvt
@@ -40,9 +73,9 @@ class falldata:
                 lie[self.tvt]+walk[self.tvt]
         self.num = len(self.image)
 
-    def generate(self, batch_size, shuffle=True, d2=False, multiL=False):
+    def generate(self, batch_size, shuffle=True, d2=False, multiL=False,
+                 augment=False):
         #d2 means only one frame is fed
-        path = './falldata/'
 
         if multiL:
             nb_classes = 5
@@ -63,6 +96,7 @@ class falldata:
                 assert (self.image[i]<184)!=label[i]
                 temp = []
                 imgs=os.listdir(path+str(self.image[i]+1).zfill(3))
+                #print self.image[i]
                 imgs=sorted(imgs)
                 if d2:
                     #name = imgs[np.random.choice(5)]
@@ -73,7 +107,7 @@ class falldata:
                     r1 = np.random.randint(2)
                     for name in imgs:
                         img = plt.imread(path+str(self.image[i]+1).zfill(3)+'/'+name)
-                        if self.tvt=='train':
+                        if augment and self.tvt=='train':
                             img = transform(img, r1)
                         temp.append(imresize(img, [224,224]))
                 # if i%10==0:
@@ -81,6 +115,7 @@ class falldata:
                 #     plt.show()
                 #     print(label[i])
                 temp = np.float32(temp)
+                #print temp.shape
                 X.append(preprocess_input(temp))
                 y.append(label[i])
                 if len(y)==batch_size or i==len(label)-1:
@@ -89,8 +124,7 @@ class falldata:
                     X, y = [], []
                     yield tmp_inp, tmp_targets
 
-    def load_all(self, shuffle=True, d2=False, multiL=False):
-        path = './falldata/'
+    def load_all(self, shuffle=True, d2=False, multiL=False, augment=False):
 
         if multiL:
             nb_classes = 5
@@ -120,7 +154,7 @@ class falldata:
                 r1 = np.random.randint(2)
                 for name in imgs:
                     img = plt.imread(path+str(self.image[i]+1).zfill(3)+'/'+name)
-                    if self.tvt=='train':
+                    if augment and self.tvt=='train':
                         img = transform(img, r1)
                     temp.append(imresize(img, [224,224]))
             temp = np.float32(temp)
@@ -136,4 +170,8 @@ class falldata:
 
 if __name__=='__main__':
     data = falldata('val')
-#    a=data.generate(25)
+    gdata=data.generate(1)
+    video, label = next(gdata)
+    print(video.shape, label)
+    plt.imshow(video[0,-1,:,:,:])
+    plt.show()

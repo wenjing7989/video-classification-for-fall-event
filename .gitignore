@@ -1,4 +1,4 @@
 result/
 *.pyc
-falldata/
-multicamera/
+multi_small/
+multi_large/
