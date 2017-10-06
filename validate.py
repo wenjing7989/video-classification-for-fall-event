@@ -6,7 +6,7 @@ from sklearn.metrics import confusion_matrix
 from loadfall import falldata
 
 # from keras import backend as K
-# K.set_learning_phase(1) #set learning phase
+# K.set_learning_phase(0) #set learning phase 0=test, 1=train
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 

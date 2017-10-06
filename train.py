@@ -8,19 +8,29 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'# suppress warning
 
 def test(model_name,tvt='test'):
-	batch_size = 1
 	data = falldata(tvt)
-	generator = data.generate(batch_size)
-	steps = data.get_steps()//batch_size
+	video, label = data.load_all()
 
-	result = model_name.model.evaluate_generator(generator, steps)
+	result = model_name.model.evaluate(video, label)
+
 	print(result[1])
 # test(mdl)
+
+def matrix(model_name,tvt='test'):
+	from sklearn.metrics import confusion_matrix
+	data = falldata(tvt)
+	video, label = data.load_all()
+
+	result = model_name.model.predict(video)
+	prediction = result.argmax(axis=1)
+	matrix = confusion_matrix(label.argmax(axis=1), prediction)
+
+	return matrix
 
 path='./result/'
 model_name = 'crnn'
 num_cuts = 5
-nb_epoch = 100
+nb_epoch = 5
 
 saved_model = None #'./result/final.hdf5'
 batch_size = 1
@@ -36,16 +46,14 @@ csv_logger = CSVLogger(path+ model_name + str(timestamp) + '.log')
 
 tdata = falldata('train')
 vdata = falldata('val')
-steps_per_epoch = tdata.get_steps()//batch_size
-validation_steps = vdata.get_steps()//batch_size
 
-generator = tdata.generate(batch_size)
-val_generator = vdata.generate(batch_size)
+Xtrain, Ytrain = tdata.load_all()
+validation = vdata.load_all()
 
 mdl = mymodels(nb_classes, model_name, num_cuts, img_size, saved_model)
-mdl.model.fit_generator(generator=generator, steps_per_epoch=steps_per_epoch,
-	epochs=nb_epoch, callbacks=[csv_logger],
-	validation_data=val_generator, validation_steps=validation_steps, verbose=2)
+mdl.model.fit(Xtrain, Ytrain, batch_size=batch_size, epochs=nb_epoch,
+	callbacks=[csv_logger], validation_data=validation, verbose=2)
 
-test(mdl)
+print(test(mdl))
+print(matrix(mdl))
 mdl.model.save(path+'final.hdf5')
