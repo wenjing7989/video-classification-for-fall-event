@@ -11,7 +11,7 @@ def test(model_name,tvt='test'):
 	batch_size = 1
 	data = falldata(tvt)
 	generator = data.generate(batch_size)
-	steps = data.get_steps()//batch_size
+	steps = data.num//batch_size
 
 	result = model_name.model.evaluate_generator(generator, steps)
 	print(result[1])
@@ -20,7 +20,7 @@ def test(model_name,tvt='test'):
 path='./result/'
 model_name = 'crnn'
 num_cuts = 5
-nb_epoch = 100
+nb_epoch = 5
 
 saved_model = None #'./result/final.hdf5'
 batch_size = 1
@@ -34,10 +34,11 @@ img_size = [224, 224, 3]
 timestamp = time.time()
 csv_logger = CSVLogger(path+ model_name + str(timestamp) + '.log')
 
-tdata = falldata('train')
-vdata = falldata('val')
-steps_per_epoch = tdata.get_steps()//batch_size
-validation_steps = vdata.get_steps()//batch_size
+tdata = falldata('train', nb_classes)
+vdata = falldata('val', nb_classes)
+
+steps_per_epoch = tdata.num//batch_size
+validation_steps = vdata.num//batch_size
 
 generator = tdata.generate(batch_size)
 val_generator = vdata.generate(batch_size)

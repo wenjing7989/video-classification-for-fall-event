@@ -73,6 +73,8 @@ class falldata:
         self.image = fall[self.tvt]+squat[self.tvt]+sit[self.tvt]+\
                 lie[self.tvt]+walk[self.tvt]
         self.num = len(self.image)
+        self.met = []
+        self.true_label = []
 
         if self.nb_classes == 5:
             self.label = [0]*len(fall[self.tvt])+[1]*len(squat[self.tvt])+\
@@ -90,6 +92,8 @@ class falldata:
         X, y = [], []
         while True:
             for i in range(self.num):
+                self.met.append(self.image[i]+1)
+                self.true_label.append(self.label[i])
                 assert (self.image[i]<184)!=self.label[i]
                 temp = []
                 imgs=os.listdir(path+str(self.image[i]+1).zfill(3))
