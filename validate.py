@@ -10,17 +10,16 @@ from loadfall import falldata
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
-num_cuts = 1
-model = load_model('./result/crnn.000-1.416.hdf5')
+model = load_model('./result/final.hdf5')
 batch_size = 1
-data=falldata('train')
-steps = np.ceil(data.get_steps()//batch_size)
+data=falldata('test')
+steps = np.ceil(data.num//batch_size)
 generator = data.generate(batch_size)
 
 result = model.evaluate_generator(generator, steps)
 print(result[1])
 
-result = model.predict_generator(generator, steps)
-prediction = result.argmax(axis=1)
+# result = model.predict_generator(generator, steps)
+# prediction = result.argmax(axis=1)
 #matrix = confusion_matrix(true_label, prediction)
 # print model.summary()

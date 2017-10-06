@@ -37,7 +37,7 @@ fall = {'train':get_idx(idx_fall[:14]), 'val':get_idx(idx_fall[14:18]),
 
 if downsample:
     # 185-224 squat 225-272 sit 273-320 lie down 321-400 walk 14,5,8
-    path = './multi_small/img/'
+    path = './multi_small/'
     idx_squat = np.random.permutation(5)+23
     idx_sit = np.random.permutation(6)+23+5
     idx_lie = np.random.permutation(6)+23+5+6
@@ -67,36 +67,33 @@ else:
             'test':get_idx(idx_walk[8:])}#10, 5 2 3
 #import pdb; pdb.set_trace()
 class falldata:
-    def __init__(self, tvt):
+    def __init__(self, tvt, nb_classes=2, shuffle=True):
         self.tvt = tvt
+        self.nb_classes = nb_classes
         self.image = fall[self.tvt]+squat[self.tvt]+sit[self.tvt]+\
                 lie[self.tvt]+walk[self.tvt]
         self.num = len(self.image)
 
-    def generate(self, batch_size, shuffle=True, d2=False, multiL=False,
-                 augment=False):
-        #d2 means only one frame is fed
-
-        if multiL:
-            nb_classes = 5
-            label = [0]*len(fall[self.tvt])+[1]*len(squat[self.tvt])+\
+        if self.nb_classes == 5:
+            self.label = [0]*len(fall[self.tvt])+[1]*len(squat[self.tvt])+\
             [2]*len(sit[self.tvt])+[3]*len(lie[self.tvt])+[4]*len(walk[self.tvt])
         else:
-            nb_classes = 2
-            label = [0]*len(fall[self.tvt])+[1]*(len(self.image)-len(fall[self.tvt]))
+            self.label = [0]*len(fall[self.tvt])+[1]*(len(self.image)-len(fall[self.tvt]))
 
         if shuffle:
-            comb = zip(self.image,label)
+            comb = zip(self.image,self.label)
             np.random.shuffle(comb)
-            self.image, label = zip(*comb)
+            self.image, self.label = zip(*comb)
 
+    def generate(self, batch_size, d2=False, augment=False):
+        #d2 means only one frame is fed
         X, y = [], []
         while True:
-            for i in range(len(label)):
-                assert (self.image[i]<184)!=label[i]
+            for i in range(self.num):
+                assert (self.image[i]<184)!=self.label[i]
                 temp = []
                 imgs=os.listdir(path+str(self.image[i]+1).zfill(3))
-                #print self.image[i]
+                #print self.image[i]+1
                 imgs=sorted(imgs)
                 if d2:
                     #name = imgs[np.random.choice(5)]
@@ -110,38 +107,20 @@ class falldata:
                         if augment and self.tvt=='train':
                             img = transform(img, r1)
                         temp.append(imresize(img, [224,224]))
-                # if i%10==0:
-                #     plt.imshow(temp)
-                #     plt.show()
-                #     print(label[i])
                 temp = np.float32(temp)
                 #print temp.shape
                 X.append(preprocess_input(temp))
-                y.append(label[i])
-                if len(y)==batch_size or i==len(label)-1:
+                y.append(self.label[i])
+                if len(y)==batch_size or i==len(self.label)-1:
                     tmp_inp = np.array(X)
-                    tmp_targets = to_categorical(y,nb_classes)
+                    tmp_targets = to_categorical(y, self.nb_classes)
                     X, y = [], []
                     yield tmp_inp, tmp_targets
 
-    def load_all(self, shuffle=True, d2=False, multiL=False, augment=False):
-
-        if multiL:
-            nb_classes = 5
-            label = [0]*len(fall[self.tvt])+[1]*len(squat[self.tvt])+\
-            [2]*len(sit[self.tvt])+[3]*len(lie[self.tvt])+[4]*len(walk[self.tvt])
-        else:
-            nb_classes = 2
-            label = [0]*len(fall[self.tvt])+[1]*(len(self.image)-len(fall[self.tvt]))
-
-        if shuffle:
-            comb = zip(self.image,label)
-            np.random.shuffle(comb)
-            self.image, label = zip(*comb)
-
+    def load_all(self, d2=False, augment=False):
         X, y = [], []
-        for i in range(len(label)):
-            assert (self.image[i]<184)!=label[i]
+        for i in range(len(self.label)):
+            assert (self.image[i]<184)!=self.label[i]
             temp = []
             imgs=os.listdir(path+str(self.image[i]+1).zfill(3))
             imgs=sorted(imgs)
@@ -159,19 +138,34 @@ class falldata:
                     temp.append(imresize(img, [224,224]))
             temp = np.float32(temp)
             X.append(preprocess_input(temp))
-            y.append(label[i])
+            y.append(self.label[i])
 
         tmp_inp = np.array(X)
-        tmp_targets = to_categorical(y,nb_classes)
+        tmp_targets = to_categorical(y, self.nb_classes)
         return tmp_inp, tmp_targets
 
-    def get_steps(self):
-        return self.num
+    def show(self):
+        # show first angel video name and label
+        for i in range(self.num):
+            if self.image[i]%8==0:
+                print(self.image[i]+1, self.label[i])
+
+    def check_generate(self):
+        gdata=self.generate(1)
+        vid, lab = next(gdata)
+        number = np.random.randint(vid.shape[1])
+        print(vid.shape, lab)
+        for i in range(0, vid.shape[1], vid.shape[1]/3):
+            plt.imshow(vid[number,i,:,:,:])
+            plt.show()
+
+    def check_loadall(self):
+        vid, lab = self.load_all()
+        number = np.random.randint(vid.shape[1])
+        print(vid.shape, lab.shape, lab[0])
+        for i in range(0, vid.shape[1], vid.shape[1]/3):
+            plt.imshow(vid[number,i,:,:,:])
+            plt.show()
 
 if __name__=='__main__':
     data = falldata('val')
-    gdata=data.generate(1)
-    video, label = next(gdata)
-    print(video.shape, label)
-    plt.imshow(video[0,-1,:,:,:])
-    plt.show()

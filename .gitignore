@@ -2,3 +2,4 @@ result/
 *.pyc
 multi_small/
 multi_large/
+tensorflow.img
